@@ -113,7 +113,7 @@ print_stats(void)
 	const char clr[] = { 27, '[', '2', 'J', '\0' };
 	const char topLeft[] = { 27, '[', '1', ';', '1', 'H','\0' };
 
-		/* Clear screen and move to top left */
+	/* Clear screen and move to top left */
 	printf("%s%s", clr, topLeft);
 
 	printf("\nPort statistics ====================================");
@@ -123,25 +123,25 @@ print_stats(void)
 		if ((l2fwd_enabled_port_mask & (1 << portid)) == 0)
 			continue;
 		printf("\nStatistics for port %u ------------------------------"
-			   "\nPackets sent: %24"PRIu64
-			   "\nPackets received: %20"PRIu64
-			   "\nPackets dropped: %21"PRIu64,
-			   portid,
-			   port_statistics[portid].tx,
-			   port_statistics[portid].rx,
-			   port_statistics[portid].dropped);
+				"\nPackets sent: %24"PRIu64
+				"\nPackets received: %20"PRIu64
+				"\nPackets dropped: %21"PRIu64,
+				portid,
+				port_statistics[portid].tx,
+				port_statistics[portid].rx,
+				port_statistics[portid].dropped);
 
 		total_packets_dropped += port_statistics[portid].dropped;
 		total_packets_tx += port_statistics[portid].tx;
 		total_packets_rx += port_statistics[portid].rx;
 	}
 	printf("\nAggregate statistics ==============================="
-		   "\nTotal packets sent: %18"PRIu64
-		   "\nTotal packets received: %14"PRIu64
-		   "\nTotal packets dropped: %15"PRIu64,
-		   total_packets_tx,
-		   total_packets_rx,
-		   total_packets_dropped);
+			"\nTotal packets sent: %18"PRIu64
+			"\nTotal packets received: %14"PRIu64
+			"\nTotal packets dropped: %15"PRIu64,
+			total_packets_tx,
+			total_packets_rx,
+			total_packets_dropped);
 	printf("\n====================================================\n");
 }
 
@@ -172,7 +172,7 @@ l2fwd_main_loop(void)
 	unsigned i, j, portid, nb_rx;
 	struct lcore_queue_conf *qconf;
 	const uint64_t drain_tsc = (rte_get_tsc_hz() + US_PER_S - 1) / US_PER_S *
-			BURST_TX_DRAIN_US;
+		BURST_TX_DRAIN_US;
 	struct rte_eth_dev_tx_buffer *buffer;
 
 	prev_tsc = 0;
@@ -192,7 +192,7 @@ l2fwd_main_loop(void)
 
 		portid = qconf->rx_port_list[i];
 		RTE_LOG(INFO, L2FWD, " -- lcoreid=%u portid=%u\n", lcore_id,
-			portid);
+				portid);
 
 	}
 
@@ -245,7 +245,7 @@ l2fwd_main_loop(void)
 
 			portid = qconf->rx_port_list[i];
 			nb_rx = rte_eth_rx_burst(portid, 0,
-						 pkts_burst, MAX_PKT_BURST);
+					pkts_burst, MAX_PKT_BURST);
 
 			port_statistics[portid].rx += nb_rx;
 
@@ -270,10 +270,10 @@ static void
 l2fwd_usage(const char *prgname)
 {
 	printf("%s [EAL options] -- -p PORTMASK [-q NQ]\n"
-	       "  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
-	       "  -q NQ: number of queue (=ports) per lcore (default is 1)\n"
-	       "  -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default, 86400 maximum)\n",
-	       prgname);
+			"  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
+			"  -q NQ: number of queue (=ports) per lcore (default is 1)\n"
+			"  -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default, 86400 maximum)\n",
+			prgname);
 }
 
 static int
@@ -328,10 +328,10 @@ l2fwd_parse_timer_period(const char *q_arg)
 }
 
 static const char short_options[] =
-	"p:"  /* portmask */
-	"q:"  /* number of queues */
-	"T:"  /* timer period */
-	;
+"p:"  /* portmask */
+"q:"  /* number of queues */
+"T:"  /* timer period */
+;
 
 enum {
 	/* long options mapped to a short option */
@@ -353,47 +353,47 @@ l2fwd_parse_args(int argc, char **argv)
 	argvopt = argv;
 
 	while ((opt = getopt_long(argc, argvopt, short_options,
-				  NULL, &option_index)) != EOF) {
+					NULL, &option_index)) != EOF) {
 
 		switch (opt) {
-		/* portmask */
-		case 'p':
-			l2fwd_enabled_port_mask = l2fwd_parse_portmask(optarg);
-			if (l2fwd_enabled_port_mask == 0) {
-				printf("invalid portmask\n");
+			/* portmask */
+			case 'p':
+				l2fwd_enabled_port_mask = l2fwd_parse_portmask(optarg);
+				if (l2fwd_enabled_port_mask == 0) {
+					printf("invalid portmask\n");
+					l2fwd_usage(prgname);
+					return -1;
+				}
+				break;
+
+				/* nqueue */
+			case 'q':
+				l2fwd_rx_queue_per_lcore = l2fwd_parse_nqueue(optarg);
+				if (l2fwd_rx_queue_per_lcore == 0) {
+					printf("invalid queue number\n");
+					l2fwd_usage(prgname);
+					return -1;
+				}
+				break;
+
+				/* timer period */
+			case 'T':
+				timer_secs = l2fwd_parse_timer_period(optarg);
+				if (timer_secs < 0) {
+					printf("invalid timer period\n");
+					l2fwd_usage(prgname);
+					return -1;
+				}
+				timer_period = timer_secs;
+				break;
+
+				/* long options */
+			case 0:
+				break;
+
+			default:
 				l2fwd_usage(prgname);
 				return -1;
-			}
-			break;
-
-		/* nqueue */
-		case 'q':
-			l2fwd_rx_queue_per_lcore = l2fwd_parse_nqueue(optarg);
-			if (l2fwd_rx_queue_per_lcore == 0) {
-				printf("invalid queue number\n");
-				l2fwd_usage(prgname);
-				return -1;
-			}
-			break;
-
-		/* timer period */
-		case 'T':
-			timer_secs = l2fwd_parse_timer_period(optarg);
-			if (timer_secs < 0) {
-				printf("invalid timer period\n");
-				l2fwd_usage(prgname);
-				return -1;
-			}
-			timer_period = timer_secs;
-			break;
-
-		/* long options */
-		case 0:
-			break;
-
-		default:
-			l2fwd_usage(prgname);
-			return -1;
 		}
 	}
 
@@ -432,10 +432,10 @@ check_all_ports_link_status(uint32_t port_mask)
 			if (print_flag == 1) {
 				if (link.link_status)
 					printf(
-					"Port%d Link Up. Speed %u Mbps - %s\n",
-						portid, link.link_speed,
-				(link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
-					("full-duplex") : ("half-duplex\n"));
+							"Port%d Link Up. Speed %u Mbps - %s\n",
+							portid, link.link_speed,
+							(link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
+							("full-duplex") : ("half-duplex\n"));
 				else
 					printf("Port %d Link Down\n", portid);
 				continue;
@@ -513,7 +513,7 @@ main(int argc, char **argv)
 	/* check port mask to possible port mask */
 	if (l2fwd_enabled_port_mask & ~((1 << nb_ports) - 1))
 		rte_exit(EXIT_FAILURE, "Invalid portmask; possible (0x%x)\n",
-			(1 << nb_ports) - 1);
+				(1 << nb_ports) - 1);
 
 	/* reset l2fwd_dst_ports */
 	for (portid = 0; portid < RTE_MAX_ETHPORTS; portid++)
@@ -553,8 +553,8 @@ main(int argc, char **argv)
 
 		/* get the lcore_id for this port */
 		while (rte_lcore_is_enabled(rx_lcore_id) == 0 ||
-		       lcore_queue_conf[rx_lcore_id].n_rx_port ==
-		       l2fwd_rx_queue_per_lcore) {
+				lcore_queue_conf[rx_lcore_id].n_rx_port ==
+				l2fwd_rx_queue_per_lcore) {
 			rx_lcore_id++;
 			if (rx_lcore_id >= RTE_MAX_LCORE)
 				rte_exit(EXIT_FAILURE, "Not enough cores\n");
@@ -572,12 +572,12 @@ main(int argc, char **argv)
 	}
 
 	nb_mbufs = RTE_MAX(nb_ports * (nb_rxd + nb_txd + MAX_PKT_BURST +
-		nb_lcores * MEMPOOL_CACHE_SIZE), 8192U);
+				nb_lcores * MEMPOOL_CACHE_SIZE), 8192U);
 
 	/* create the mbuf pool */
 	l2fwd_pktmbuf_pool = rte_pktmbuf_pool_create("mbuf_pool", nb_mbufs,
-		MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
-		rte_socket_id());
+			MEMPOOL_CACHE_SIZE, 0, RTE_MBUF_DEFAULT_BUF_SIZE,
+			rte_socket_id());
 	if (l2fwd_pktmbuf_pool == NULL)
 		rte_exit(EXIT_FAILURE, "Cannot init mbuf pool\n");
 
@@ -605,14 +605,14 @@ main(int argc, char **argv)
 		ret = rte_eth_dev_configure(portid, 1, 1, &local_port_conf);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "Cannot configure device: err=%d, port=%u\n",
-				  ret, portid);
+					ret, portid);
 
 		ret = rte_eth_dev_adjust_nb_rx_tx_desc(portid, &nb_rxd,
-						       &nb_txd);
+				&nb_txd);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE,
-				 "Cannot adjust number of descriptors: err=%d, port=%u\n",
-				 ret, portid);
+					"Cannot adjust number of descriptors: err=%d, port=%u\n",
+					ret, portid);
 
 		rte_eth_macaddr_get(portid,&l2fwd_ports_eth_addr[portid]);
 
@@ -621,12 +621,12 @@ main(int argc, char **argv)
 		rxq_conf = dev_info.default_rxconf;
 		rxq_conf.offloads = local_port_conf.rxmode.offloads;
 		ret = rte_eth_rx_queue_setup(portid, 0, nb_rxd,
-					     rte_eth_dev_socket_id(portid),
-					     &rxq_conf,
-					     l2fwd_pktmbuf_pool);
+				rte_eth_dev_socket_id(portid),
+				&rxq_conf,
+				l2fwd_pktmbuf_pool);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "rte_eth_rx_queue_setup:err=%d, port=%u\n",
-				  ret, portid);
+					ret, portid);
 
 		/* init one TX queue on each port */
 		fflush(stdout);
@@ -637,7 +637,7 @@ main(int argc, char **argv)
 				&txq_conf);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "rte_eth_tx_queue_setup:err=%d, port=%u\n",
-				ret, portid);
+					ret, portid);
 
 		/* Initialize TX buffers */
 		tx_buffer[portid] = rte_zmalloc_socket("tx_buffer",
@@ -654,14 +654,14 @@ main(int argc, char **argv)
 				&port_statistics[portid].dropped);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE,
-			"Cannot set error callback for tx buffer on port %u\n",
-				 portid);
+					"Cannot set error callback for tx buffer on port %u\n",
+					portid);
 
 		/* Start device */
 		ret = rte_eth_dev_start(portid);
 		if (ret < 0)
 			rte_exit(EXIT_FAILURE, "rte_eth_dev_start:err=%d, port=%u\n",
-				  ret, portid);
+					ret, portid);
 
 		printf("done: \n");
 
@@ -682,7 +682,7 @@ main(int argc, char **argv)
 
 	if (!nb_ports_available) {
 		rte_exit(EXIT_FAILURE,
-			"All available ports are disabled. Please set portmask.\n");
+				"All available ports are disabled. Please set portmask.\n");
 	}
 
 	check_all_ports_link_status(l2fwd_enabled_port_mask);
