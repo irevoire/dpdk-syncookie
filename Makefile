@@ -2,7 +2,7 @@
 # Copyright(c) 2010-2014 Intel Corporation
 
 # binary name
-APP = l2fwd
+APP = proxy
 
 # all source are stored in SRCS-y
 SRCS-y := main.c
