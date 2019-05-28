@@ -39,6 +39,9 @@
 #include <rte_mempool.h>
 #include <rte_mbuf.h>
 
+#include "lcore_queue.h"
+#include "l2fwd.h"
+
 static volatile bool force_quit;
 
 #define RTE_LOGTYPE_L2FWD RTE_LOGTYPE_USER1
@@ -59,22 +62,14 @@ static uint16_t nb_txd = RTE_TEST_TX_DESC_DEFAULT;
 static struct ether_addr l2fwd_ports_eth_addr[RTE_MAX_ETHPORTS];
 
 /* mask of enabled ports */
-static uint32_t l2fwd_enabled_port_mask = 0;
+uint32_t l2fwd_enabled_port_mask = 0;
 
 /* list of enabled ports */
-static uint32_t l2fwd_dst_ports[RTE_MAX_ETHPORTS];
+uint32_t l2fwd_dst_ports[RTE_MAX_ETHPORTS];
 
-static unsigned int l2fwd_rx_queue_per_lcore = 1;
+unsigned int l2fwd_rx_queue_per_lcore = 1;
 
-#define MAX_RX_QUEUE_PER_LCORE 16
-#define MAX_TX_QUEUE_PER_PORT 16
-struct lcore_queue_conf {
-	unsigned n_rx_port;
-	unsigned rx_port_list[MAX_RX_QUEUE_PER_LCORE];
-} __rte_cache_aligned;
-struct lcore_queue_conf lcore_queue_conf[RTE_MAX_LCORE];
-
-static struct rte_eth_dev_tx_buffer *tx_buffer[RTE_MAX_ETHPORTS];
+struct rte_eth_dev_tx_buffer *tx_buffer[RTE_MAX_ETHPORTS];
 
 static struct rte_eth_conf port_conf = {
 	.rxmode = {
@@ -95,9 +90,8 @@ struct l2fwd_port_statistics {
 } __rte_cache_aligned;
 struct l2fwd_port_statistics port_statistics[RTE_MAX_ETHPORTS];
 
-#define MAX_TIMER_PERIOD 86400 /* 1 day max */
 /* A tsc-based timer responsible for triggering statistics printout */
-static uint64_t timer_period = 10; /* default period is 10 seconds */
+uint64_t timer_period = 10; /* default period is 10 seconds */
 
 /* Print out statistics on packets dropped */
 static void
@@ -265,74 +259,6 @@ l2fwd_launch_one_lcore(__attribute__((unused)) void *dummy)
 	return 0;
 }
 
-/* display usage */
-static void
-l2fwd_usage(const char *prgname)
-{
-	printf("%s [EAL options] -- -p PORTMASK [-q NQ]\n"
-			"  -p PORTMASK: hexadecimal bitmask of ports to configure\n"
-			"  -q NQ: number of queue (=ports) per lcore (default is 1)\n"
-			"  -T PERIOD: statistics will be refreshed each PERIOD seconds (0 to disable, 10 default, 86400 maximum)\n",
-			prgname);
-}
-
-static int
-l2fwd_parse_portmask(const char *portmask)
-{
-	char *end = NULL;
-	unsigned long pm;
-
-	/* parse hexadecimal string */
-	pm = strtoul(portmask, &end, 16);
-	if ((portmask[0] == '\0') || (end == NULL) || (*end != '\0'))
-		return -1;
-
-	if (pm == 0)
-		return -1;
-
-	return pm;
-}
-
-static unsigned int
-l2fwd_parse_nqueue(const char *q_arg)
-{
-	char *end = NULL;
-	unsigned long n;
-
-	/* parse hexadecimal string */
-	n = strtoul(q_arg, &end, 10);
-	if ((q_arg[0] == '\0') || (end == NULL) || (*end != '\0'))
-		return 0;
-	if (n == 0)
-		return 0;
-	if (n >= MAX_RX_QUEUE_PER_LCORE)
-		return 0;
-
-	return n;
-}
-
-static int
-l2fwd_parse_timer_period(const char *q_arg)
-{
-	char *end = NULL;
-	int n;
-
-	/* parse number string */
-	n = strtol(q_arg, &end, 10);
-	if ((q_arg[0] == '\0') || (end == NULL) || (*end != '\0'))
-		return -1;
-	if (n >= MAX_TIMER_PERIOD)
-		return -1;
-
-	return n;
-}
-
-static const char short_options[] =
-"p:"  /* portmask */
-"q:"  /* number of queues */
-"T:"  /* timer period */
-;
-
 enum {
 	/* long options mapped to a short option */
 
@@ -340,70 +266,6 @@ enum {
 	 * conflict with short options */
 	CMD_LINE_OPT_MIN_NUM = 256,
 };
-
-/* Parse the argument given in the command line of the application */
-static int
-l2fwd_parse_args(int argc, char **argv)
-{
-	int opt, ret, timer_secs;
-	char **argvopt;
-	int option_index;
-	char *prgname = argv[0];
-
-	argvopt = argv;
-
-	while ((opt = getopt_long(argc, argvopt, short_options,
-					NULL, &option_index)) != EOF) {
-
-		switch (opt) {
-			/* portmask */
-			case 'p':
-				l2fwd_enabled_port_mask = l2fwd_parse_portmask(optarg);
-				if (l2fwd_enabled_port_mask == 0) {
-					printf("invalid portmask\n");
-					l2fwd_usage(prgname);
-					return -1;
-				}
-				break;
-
-				/* nqueue */
-			case 'q':
-				l2fwd_rx_queue_per_lcore = l2fwd_parse_nqueue(optarg);
-				if (l2fwd_rx_queue_per_lcore == 0) {
-					printf("invalid queue number\n");
-					l2fwd_usage(prgname);
-					return -1;
-				}
-				break;
-
-				/* timer period */
-			case 'T':
-				timer_secs = l2fwd_parse_timer_period(optarg);
-				if (timer_secs < 0) {
-					printf("invalid timer period\n");
-					l2fwd_usage(prgname);
-					return -1;
-				}
-				timer_period = timer_secs;
-				break;
-
-				/* long options */
-			case 0:
-				break;
-
-			default:
-				l2fwd_usage(prgname);
-				return -1;
-		}
-	}
-
-	if (optind >= 0)
-		argv[optind-1] = prgname;
-
-	ret = optind-1;
-	optind = 1; /* reset getopt lib */
-	return ret;
-}
 
 /* Check the link status of all ports in up to 9s, and print them finally */
 static void
@@ -431,8 +293,7 @@ check_all_ports_link_status(uint32_t port_mask)
 			/* print link status if flag set */
 			if (print_flag == 1) {
 				if (link.link_status)
-					printf(
-							"Port%d Link Up. Speed %u Mbps - %s\n",
+					printf("Port%d Link Up. Speed %u Mbps - %s\n",
 							portid, link.link_speed,
 							(link.link_duplex == ETH_LINK_FULL_DUPLEX) ?
 							("full-duplex") : ("half-duplex\n"));
