@@ -155,8 +155,8 @@ l2fwd_simple_forward(struct rte_mbuf *m, unsigned portid)
 }
 
 /* main processing loop */
-static void
-l2fwd_main_loop(void)
+static int
+main_loop(__attribute__((unused)) void *dummy)
 {
 	struct rte_mbuf *pkts_burst[MAX_PKT_BURST];
 	struct rte_mbuf *m;
@@ -177,7 +177,7 @@ l2fwd_main_loop(void)
 
 	if (qconf->n_rx_port == 0) {
 		RTE_LOG(INFO, L2FWD, "lcore %u has nothing to do\n", lcore_id);
-		return;
+		return 0;
 	}
 
 	RTE_LOG(INFO, L2FWD, "entering main loop on lcore %u\n", lcore_id);
@@ -250,12 +250,6 @@ l2fwd_main_loop(void)
 			}
 		}
 	}
-}
-
-static int
-l2fwd_launch_one_lcore(__attribute__((unused)) void *dummy)
-{
-	l2fwd_main_loop();
 	return 0;
 }
 
@@ -550,7 +544,7 @@ main(int argc, char **argv)
 
 	ret = 0;
 	/* launch per-lcore init on every lcore */
-	rte_eal_mp_remote_launch(l2fwd_launch_one_lcore, NULL, CALL_MASTER);
+	rte_eal_mp_remote_launch(main_loop, NULL, CALL_MASTER);
 	RTE_LCORE_FOREACH_SLAVE(lcore_id) {
 		if (rte_eal_wait_lcore(lcore_id) < 0) {
 			ret = -1;
