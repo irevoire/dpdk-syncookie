@@ -191,7 +191,6 @@ main_loop(__attribute__((unused)) void *dummy)
 	}
 
 	while (!force_quit) {
-
 		cur_tsc = rte_rdtsc();
 
 		/*
@@ -199,9 +198,7 @@ main_loop(__attribute__((unused)) void *dummy)
 		 */
 		diff_tsc = cur_tsc - prev_tsc;
 		if (unlikely(diff_tsc > drain_tsc)) {
-
 			for (i = 0; i < qconf->n_rx_port; i++) {
-
 				portid = l2fwd_dst_ports[qconf->rx_port_list[i]];
 				buffer = tx_buffer[portid];
 
@@ -210,16 +207,13 @@ main_loop(__attribute__((unused)) void *dummy)
 					port_statistics[portid].tx += sent;
 
 			}
-
 			/* if timer is enabled */
 			if (timer_period > 0) {
-
 				/* advance the timer */
 				timer_tsc += diff_tsc;
 
 				/* if timer has reached its timeout */
 				if (unlikely(timer_tsc >= timer_period)) {
-
 					/* do this only on master core */
 					if (lcore_id == rte_get_master_lcore()) {
 						print_stats();
@@ -230,13 +224,12 @@ main_loop(__attribute__((unused)) void *dummy)
 			}
 
 			prev_tsc = cur_tsc;
-		}
+		} /* if(unlikely(diff_tsc > drain_tsc)) */
 
 		/*
 		 * Read packet from RX queues
 		 */
 		for (i = 0; i < qconf->n_rx_port; i++) {
-
 			portid = qconf->rx_port_list[i];
 			nb_rx = rte_eth_rx_burst(portid, 0,
 					pkts_burst, MAX_PKT_BURST);
@@ -249,7 +242,7 @@ main_loop(__attribute__((unused)) void *dummy)
 				l2fwd_simple_forward(m, portid);
 			}
 		}
-	}
+	} /* while (!force_quit) */
 	return 0;
 }
 
