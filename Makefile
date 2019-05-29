@@ -5,7 +5,7 @@
 APP = proxy
 
 # all source are stored in SRCS-y
-SRCS-y := main.c l2fwd.c
+SRCS-y := main.c l2fwd.c utils.c
 
 # Build using pkg-config variables if possible
 $(shell pkg-config --exists libdpdk)
